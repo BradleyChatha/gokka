@@ -91,3 +91,27 @@ func Exec3[T1 any, T2 any, T3 any](mock *Mock, name string, args ...any) (T1, T2
 	err = ret[2].Decode(&ret3)
 	return ret1, ret2, ret3, err
 }
+
+func MustExec1[T any](mock *Mock, name string, args ...any) T {
+	ret, err := Exec1[T](mock, name, args...)
+	if err != nil {
+		panic(err)
+	}
+	return ret
+}
+
+func MustExec2[T1 any, T2 any](mock *Mock, name string, args ...any) (T1, T2) {
+	r1, r2, err := Exec2[T1, T2](mock, name, args...)
+	if err != nil {
+		panic(err)
+	}
+	return r1, r2
+}
+
+func MustExec3[T1 any, T2 any, T3 any](mock *Mock, name string, args ...any) (T1, T2, T3) {
+	r1, r2, r3, err := Exec3[T1, T2, T3](mock, name, args...)
+	if err != nil {
+		panic(err)
+	}
+	return r1, r2, r3
+}
