@@ -44,6 +44,8 @@ func init() {
 	returns: [..._]
 }
 
+vars: [string]: _
+
 funcs: [string]: #MockFunction
 	`)
 
