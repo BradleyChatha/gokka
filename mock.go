@@ -18,6 +18,7 @@ import (
 type Mock struct {
 	funcs     map[string]cue.Value
 	callCount map[string]*uint64
+	scope     cue.Value
 }
 
 type mockContext struct {
@@ -49,6 +50,33 @@ funcs: [string]: #MockFunction
 	globalContext.scope = builtin
 }
 
+func (m *Mock) injectVar(as string, value any) {
+	cueValue := globalContext.cueContext.Encode(value)
+
+	valueNode := cueValue.Syntax()
+	switch expr := valueNode.(type) {
+	case ast.Expr:
+		node := ast.NewStruct(
+			&ast.Field{
+				Label: ast.NewIdent(as),
+				Value: expr,
+			},
+		)
+
+		parent := ast.NewStruct(
+			&ast.Field{
+				Label: ast.NewIdent("vars"),
+				Value: node,
+			},
+		)
+
+		value := globalContext.cueContext.BuildExpr(parent)
+		m.scope = m.scope.Unify(value)
+	default:
+		panic(fmt.Errorf("type %T is not an expression. This is 100%% a bug, please report", valueNode))
+	}
+}
+
 func RegisterType[T any](as string) {
 	var x T
 	value := globalContext.cueContext.EncodeType(x)
@@ -73,12 +101,21 @@ func RegisterType[T any](as string) {
 }
 
 func NewMock(cueCode string) (*Mock, error) {
+	return NewMockWithVars(cueCode, nil)
+}
+
+func NewMockWithVars(cueCode string, vars map[string]any) (*Mock, error) {
 	mock := &Mock{
 		funcs:     make(map[string]cue.Value),
 		callCount: make(map[string]*uint64),
+		scope:     globalContext.scope,
 	}
 
-	compiled := globalContext.cueContext.CompileString(cueCode, cue.Scope(globalContext.scope))
+	for as, value := range vars {
+		mock.injectVar(as, value)
+	}
+
+	compiled := globalContext.cueContext.CompileString(cueCode, cue.Scope(mock.scope))
 	if compiled.Err() != nil {
 		return nil, compiled.Err()
 	}
