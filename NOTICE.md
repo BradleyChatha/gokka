@@ -1,0 +1,3 @@
+(This is a simple piece of text you can include in your project to make sure you comply with the MPLv2 in the event that you don't modify this library's source code)
+
+This project uses `gokka`, a Golang mocking library. This project does not modify the original source code, so as per the Mozilla Public License v2.0, you can access the exact code used by this project at: https://github.com/BradleyChatha/gokka
