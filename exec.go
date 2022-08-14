@@ -9,7 +9,33 @@ package gokka
 import (
 	"errors"
 	"fmt"
+
+	"cuelang.org/go/cue"
 )
+
+func decode(value cue.Value, ret any) error {
+	if ptr, ok := ret.(*error); ok {
+		if value.Null() == nil {
+			*ptr = nil
+			return nil
+		}
+
+		msg := value.LookupPath(cue.ParsePath("Error"))
+		if err := msg.Err(); err != nil {
+			panic(err)
+		}
+
+		str, err := msg.String()
+		if err != nil {
+			panic(err)
+		}
+
+		*ptr = errors.New(str)
+		return nil
+	} else {
+		return value.Decode(ret)
+	}
+}
 
 func Exec1[T any](mock *Mock, name string, args ...any) (T, error) {
 	var ret1 T
@@ -28,7 +54,7 @@ func Exec1[T any](mock *Mock, name string, args ...any) (T, error) {
 		return ret1, fmt.Errorf("expected 1 return value, got %d", len(ret))
 	}
 
-	err = ret[0].Decode(&ret1)
+	err = decode(ret[0], &ret1)
 	return ret1, err
 }
 
@@ -50,12 +76,12 @@ func Exec2[T1 any, T2 any](mock *Mock, name string, args ...any) (T1, T2, error)
 		return ret1, ret2, fmt.Errorf("expected 2 return values, got %d", len(ret))
 	}
 
-	err = ret[0].Decode(&ret1)
+	err = decode(ret[0], &ret1)
 	if err != nil {
 		return ret1, ret2, err
 	}
 
-	err = ret[1].Decode(&ret2)
+	err = decode(ret[1], &ret2)
 	return ret1, ret2, err
 }
 
@@ -78,17 +104,17 @@ func Exec3[T1 any, T2 any, T3 any](mock *Mock, name string, args ...any) (T1, T2
 		return ret1, ret2, ret3, fmt.Errorf("expected 3 return values, got %d", len(ret))
 	}
 
-	err = ret[0].Decode(&ret1)
+	err = decode(ret[0], &ret1)
 	if err != nil {
 		return ret1, ret2, ret3, err
 	}
 
-	err = ret[1].Decode(&ret2)
+	err = decode(ret[1], &ret2)
 	if err != nil {
 		return ret1, ret2, ret3, err
 	}
 
-	err = ret[2].Decode(&ret3)
+	err = decode(ret[2], &ret3)
 	return ret1, ret2, ret3, err
 }
 

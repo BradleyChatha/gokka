@@ -18,7 +18,7 @@ funcs: UseInjectedVar: #MockFunction & {
 }
 `
 
-var _ = Describe("Example2", func() {
+var _ = Describe("Example3", func() {
 	When("we make a mock", func() {
 		It("should use our injected variable", func() {
 			mock, err := gokka.NewMockWithVars(example3Definition, map[string]any{"injected": "value"})

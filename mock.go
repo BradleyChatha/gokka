@@ -13,11 +13,12 @@ import (
 	"cuelang.org/go/cue"
 	"cuelang.org/go/cue/ast"
 	"cuelang.org/go/cue/cuecontext"
+	"github.com/hashicorp/go-multierror"
 )
 
 type Mock struct {
 	funcs     map[string]cue.Value
-	callCount map[string]*uint64
+	callCount map[string][]uint64
 	scope     cue.Value
 }
 
@@ -46,7 +47,7 @@ func init() {
 
 vars: [string]: _
 
-funcs: [string]: #MockFunction
+funcs: [string]: #MockFunction | [...#MockFunction]
 	`)
 
 	globalContext.scope = builtin
@@ -109,7 +110,7 @@ func NewMock(cueCode string) (*Mock, error) {
 func NewMockWithVars(cueCode string, vars map[string]any) (*Mock, error) {
 	mock := &Mock{
 		funcs:     make(map[string]cue.Value),
-		callCount: make(map[string]*uint64),
+		callCount: make(map[string][]uint64),
 		scope:     globalContext.scope,
 	}
 
@@ -129,8 +130,9 @@ func NewMockWithVars(cueCode string, vars map[string]any) (*Mock, error) {
 				continue
 			}
 
+			overloadCount, _ := iter.Value().Len().Int64()
 			mock.funcs[iter.Label()] = iter.Value()
-			mock.callCount[iter.Label()] = new(uint64)
+			mock.callCount[iter.Label()] = make([]uint64, overloadCount+1)
 		}
 		return mock, nil
 	} else {
@@ -138,41 +140,58 @@ func NewMockWithVars(cueCode string, vars map[string]any) (*Mock, error) {
 	}
 }
 
-func execFunction(count *uint64, f cue.Value, args ...any) ([]cue.Value, error) {
-	*count++
-	maxCalls, err := f.LookupPath(cue.ParsePath("maxCalls")).Uint64()
-	if err != nil {
-		return nil, err
+func execFunction(count []uint64, f cue.Value, args ...any) ([]cue.Value, error) {
+	var mainErr error
+	var overloads []cue.Value
+
+	if l, err := f.List(); err == nil {
+		for l.Next() {
+			overloads = append(overloads, l.Value())
+		}
+	} else {
+		overloads = append(overloads, f)
 	}
 
-	if *count > maxCalls && *count < math.MaxUint64 {
-		return nil, fmt.Errorf("max calls exceeded")
+	for i, overload := range overloads {
+		count[i]++
+		maxCalls, err := overload.LookupPath(cue.ParsePath("maxCalls")).Uint64()
+		if err != nil {
+			return nil, err
+		}
+
+		if count[i] > maxCalls && count[i] < math.MaxUint64 {
+			return nil, fmt.Errorf("max calls exceeded")
+		}
+
+		argCount, _ := overload.LookupPath(cue.ParsePath("args")).Len().Int64()
+		if int(argCount) != len(args) {
+			mainErr = multierror.Append(mainErr, fmt.Errorf("expected %d arguments, got %d", argCount, len(args)))
+			continue
+		}
+
+		for i, arg := range args {
+			argValue := globalContext.cueContext.Encode(arg)
+			overload = overload.FillPath(cue.ParsePath(fmt.Sprintf("args[%d]", i)), argValue)
+		}
+
+		err = overload.Validate(cue.Concrete(true))
+		if err != nil {
+			mainErr = multierror.Append(mainErr, err)
+			continue
+		}
+
+		retValues, err := overload.LookupPath(cue.ParsePath("returns")).List()
+		if err != nil {
+			return nil, err
+		}
+
+		var ret []cue.Value
+		for retValues.Next() {
+			ret = append(ret, retValues.Value())
+		}
+
+		return ret, nil
 	}
 
-	argCount, _ := f.LookupPath(cue.ParsePath("args")).Len().Int64()
-	if int(argCount) != len(args) {
-		return nil, fmt.Errorf("expected %d arguments, got %d", argCount, len(args))
-	}
-
-	for i, arg := range args {
-		argValue := globalContext.cueContext.Encode(arg)
-		f = f.FillPath(cue.ParsePath(fmt.Sprintf("args[%d]", i)), argValue)
-	}
-
-	err = f.Validate(cue.Concrete(true))
-	if err != nil {
-		return nil, err
-	}
-
-	retValues, err := f.LookupPath(cue.ParsePath("returns")).List()
-	if err != nil {
-		return nil, err
-	}
-
-	var ret []cue.Value
-	for retValues.Next() {
-		ret = append(ret, retValues.Value())
-	}
-
-	return ret, nil
+	return nil, multierror.Append(mainErr, fmt.Errorf("no overloads matched"))
 }
