@@ -4,9 +4,20 @@ Gokka is a small mocking library for Go. It requires no external binary, and use
 [CUE](https://cuelang.org/) to perform its validation and mocking.
 
 - [Overview](#overview)
+  - [Features](#features)
   - [Getting started](#getting-started)
   - [Examples](#examples)
   - [LICENSE](#license)
+
+## Features
+
+- Use the power of CUElang to perform validation; data templating, and more!
+- Doesn't require an external binary.
+- Easy interface to import Golang types into CUE, to keep everything statically typed.
+- Each mocked function can:
+  - Have multiple overloads, to customise the output based on any given input.
+  - Specify the maximum amount of times it can be called before it returns an error (this is specified per overload currently).
+- Uses generics to provide a sane interface to the developer.
 
 ## Getting started
 
