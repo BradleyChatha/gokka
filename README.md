@@ -3,7 +3,12 @@
 Gokka is a small mocking library for Go. It requires no external binary, and uses the expressiveness of
 [CUE](https://cuelang.org/) to perform its validation and mocking.
 
-# Getting started
+- [Overview](#overview)
+  - [Getting started](#getting-started)
+  - [Examples](#examples)
+  - [LICENSE](#license)
+
+## Getting started
 
 First, install the package:
 
@@ -84,9 +89,9 @@ func TestMyInterfaceMock(t *testing.T) {
         t.Error("Expected false, got true")
     }
 
-    _, err = mock.HasName(interface.Input{Name: "This should error out because empty list"}, []string{})
-    if err != nil {
-        t.Error(err)
+    _, err = mock.HasName(Input{Name: "This should error out because empty list"}, []string{})
+    if err == nil {
+        t.Error("Expected error")
     }
 
     // Use something other than the testing module to catch this panic.
@@ -134,3 +139,26 @@ funcs: HasName: [
 ]
 `
 ```
+
+## Examples
+
+All of the test cases also serve as examples, so please view the `exampleX_test.go` files.
+
+## LICENSE
+
+Most of the files in this repo are covered by the Mozilla Public License v 2.0, which you can find a copy of here: https://mozilla.org/MPL/2.0/
+
+Please read this FAQ on how to handle source code with this license: https://www.mozilla.org/en-US/MPL/2.0/FAQ/
+
+The major, meaty points:
+
+* You must make available any user that has access to the distribution of your project any MPLv2 files, either modified or unmodified.
+    * For unmodified code, making the `NOTICE.md` file available should suffice.
+    * For modified code, the entire modified file, regardless of whether it has "proprietary" code (which cannot exist under an MPLv2 file by definition), must be made freely available to the user(s) with access to the distributed project.
+    * This does not apply for projects that are not distributed directly to users, such as backend servers, even if those servers are publically accessible they are not "distributed" in the sense that MPLv2 applies itself to.
+* You are free to statically and dynamically link this code into your project.
+* You do **not** have to disclose anything else about your project. MPLv2 does not prevent you from keeping your proprietary code private, and it does not prevent you using a different license for your other files.
+
+There's a bunch more points the FAQ can help you with, but the gist of this license is that you cannot modify the code without "giving back to the community". You **must** release in full any modified files that contain the MPLv2 license notification (which you cannot remove), but other than that it's a very permissive license, despite being copy-left.
+
+This license encourages people to open MRs to improve the project, rather than keeping things to themselves, but does so in a way that it doesn't make it unviable for commercial use.
