@@ -20,7 +20,28 @@ func decode(value cue.Value, ret any) error {
 			return nil
 		}
 
-		msg := value.LookupPath(cue.ParsePath("Error"))
+		var msg cue.Value
+		iter, err := value.Fields(cue.Attributes(true))
+		if err != nil {
+			return err
+		}
+		for iter.Next() {
+			attrib := iter.Value().Attribute("gokka")
+			if attrib.NumArgs() == 0 {
+				continue
+			}
+
+			for i := 0; i < attrib.NumArgs(); i++ {
+				name, _ := attrib.Arg(i)
+				if name == "errorString" {
+					msg = iter.Value()
+					break
+				}
+			}
+		}
+		if msg.Null() == nil {
+			panic("no error message, attach @gokka(errorString) to the error field")
+		}
 		if err := msg.Err(); err != nil {
 			panic(err)
 		}

@@ -36,7 +36,7 @@ func init() {
 
 	builtin := globalContext.cueContext.CompileString(`
 #GoError: {
-	Error: string @go(s,string)
+	Error: string @go(s,string) @gokka(errorString)
 }
 
 #MockFunction: {
@@ -51,6 +51,10 @@ funcs: [string]: #MockFunction | [...#MockFunction]
 	`)
 
 	globalContext.scope = builtin
+}
+
+func (m *Mock) ScopeString() string {
+	return fmt.Sprintf("%v", m.scope)
 }
 
 func (m *Mock) injectVar(as string, value any) {
